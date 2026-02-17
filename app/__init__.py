@@ -1,4 +1,3 @@
-from app.apis.student import api as student_ns
 from app.apis.hello import api as hello_ns
 from app.apis.auth import api as auth_ns
 from app.config import Config
@@ -22,10 +21,9 @@ def create_app():
     )
 
     api.init_app(app)
-    api.add_namespace(student_ns)
     api.add_namespace(hello_ns)
     api.add_namespace(auth_ns)
-
+n
     @api.errorhandler(Exception)
     def handle_input_validation_error(error):
         return {"message": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR
