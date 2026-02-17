@@ -23,7 +23,7 @@ def create_app():
     api.init_app(app)
     api.add_namespace(hello_ns)
     api.add_namespace(auth_ns)
-n
+
     @api.errorhandler(Exception)
     def handle_input_validation_error(error):
         return {"message": str(error)}, HTTPStatus.INTERNAL_SERVER_ERROR
