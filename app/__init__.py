@@ -15,9 +15,9 @@ def create_app():
     DB.init_app(app)
 
     api = Api(
-        title="Students",
+        title="Fitness Class Management and Booking System",
         version="1.0",
-        description="A simple student record keeping API",
+        description="A simple Fitness Class Management and Booking System  API",
     )
 
     api.init_app(app)
