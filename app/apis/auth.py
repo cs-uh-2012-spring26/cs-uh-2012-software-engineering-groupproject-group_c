@@ -77,9 +77,43 @@ class Register(Resource):
             return {"message": str(e)}, HTTPStatus.CONFLICT
         except Exception as e:
             return {"message": f"Registration failed: {str(e)}"}, HTTPStatus.BAD_REQUEST
+       
         
 @api.route("/login")
 class Login(Resource):
-    @api.expect(AUTH_MODEL)
+    @api.expect(LOGIN_MODEL)
+    @api.response(HTTPStatus.OK, "Login successful", TOKEN_RESPONSE_MODEL)
+    @api.response(HTTPStatus.UNAUTHORIZED, "Invalid credentials")
     def post(self):
-        return {"message": "Login endpoint initialized"}, 200
+        """Login with email and password — returns JWT access and refresh tokens"""
+        data = request.json
+        if not data:
+            return {"message": "Request body is required"}, HTTPStatus.BAD_REQUEST
+
+        email = (data.get("email") or "").strip()
+        password = data.get("password") or ""
+
+        if not email or not password:
+            return {"message": "email and password are required"}, HTTPStatus.BAD_REQUEST
+
+        user_resource = UserResource()
+        user = user_resource.authenticate_user(email, password)
+
+        if not user:
+            return {"message": "Invalid email or password"}, HTTPStatus.UNAUTHORIZED
+
+        claims = {"id": user["_id"], "email": user["email"], "role": user["role"]}
+        access_token = create_access_token(identity=user["email"], additional_claims=claims)
+        refresh_token = create_refresh_token(identity=user["email"], additional_claims=claims)
+
+        return {
+            "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": {
+                "id": user.get("_id"),
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "role": user.get("role"),
+            },
+        }, HTTPStatus.OK
