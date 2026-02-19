@@ -39,13 +39,45 @@ TOKEN_RESPONSE_MODEL = api.model("TokenResponse", {
     })),
 })
 
-
 @api.route("/register")
 class Register(Resource):
-    @api.expect(AUTH_MODEL)
+    @api.expect(REGISTER_MODEL)
+    @api.response(HTTPStatus.CREATED, "User registered successfully")
+    @api.response(HTTPStatus.BAD_REQUEST, "Missing required fields")
+    @api.response(HTTPStatus.CONFLICT, "User already exists")
     def post(self):
-        return {"message": "Register endpoint initialized"}, 200
+        """Register a new user (email, phone, password required)"""
+        data = request.json
+        if not data:
+            return {"message": "Request body is required"}, HTTPStatus.BAD_REQUEST
 
+        name = data.get("name", "").strip()
+        email = data.get("email", "").strip()
+        phone = data.get("phone", "").strip()
+        password = data.get("password") or ""
+        role = (data.get("role") or "member").lower()
+
+        if not all([name, email,phone, password]):
+            return {"message": "name,email, phone,and password are all required"}, HTTPStatus.BAD_REQUEST
+
+        if role not in ("member", "trainer","admin"):
+            return {"message": "role must be one of: member, trainer, admin"}, HTTPStatus.BAD_REQUEST
+
+        user_resource = UserResource()
+        try:
+            user_id = user_resource.register_user(
+                name=name,
+                email=email,
+                phone=phone,
+                password=password,
+                role=role,
+            )
+            return {"message": "User registered successfully","user_id": user_id}, HTTPStatus.CREATED
+        except ValueError as e:
+            return {"message": str(e)}, HTTPStatus.CONFLICT
+        except Exception as e:
+            return {"message": f"Registration failed: {str(e)}"}, HTTPStatus.BAD_REQUEST
+        
 @api.route("/login")
 class Login(Resource):
     @api.expect(AUTH_MODEL)
