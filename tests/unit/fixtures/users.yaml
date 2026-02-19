@@ -1,0 +1,16 @@
+- name: Paul
+  email: pcl8809@nyu.edu
+  phone: "1234567890"
+  role: "member"
+  birthdate: "2004-03-05"
+  gender: "male"
+  password: "paul123"
+
+- name: luziga
+  email: luziga@nyu.edu
+  phone: "1234567891"
+  role: "admin"
+  birthdate: "2004-03-05"
+  gender: "female"
+  password: "luziga123"
+  
