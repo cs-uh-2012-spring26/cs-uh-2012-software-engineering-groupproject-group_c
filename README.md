@@ -1,6 +1,6 @@
-# Students Records API
+# Fitness Class Management and Booking API
 
-This repo provides a template for setting up a flask rest API server. As a starting point, it shows an example of a simple hello world endpoint as well as endpoints that offer interactions with student records.
+This is a repo for a Fitness Class Management and Booking API. The API manages user authentication, Class booking and Class listing
 
 ## Prerequisites
 
