@@ -29,7 +29,7 @@ class UserResource:
         users = self.collection.find(query)
         return serialize_items(list(users))
 
-    def create_user(self, name: str, email: str, phone: str, role: str, password: str, birthdate: str, gender: str):
+    def create_user(self, name: str, email: str, phone: str, role: str, password: str, birthdate: str |  None = None , gender: str |  None = None):
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
         user = {
             NAME: name,

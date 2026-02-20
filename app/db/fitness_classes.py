@@ -35,24 +35,28 @@ class FitnessClassResource:
        result = self.collection.insert_one(fitness_class)
        return str(result.inserted_id)
 
-   def book_class(self, class_id: str, user_id: str, is_trainer: bool = False):
+   def book_class(self, class_id: str, participant: dict, is_trainer: bool = False):
        fitness_class = self.get_class_by_id(class_id)
        if fitness_class is None:
            return "not_found"
 
        participants = fitness_class.get(PARTICIPANTS, [])
-       if user_id in participants:
-           return "already_booked"
+       email = participant.get("email", "")
+       for p in participants:
+           if isinstance(p, dict) and p.get("email") == email:
+              return "already_booked"
+           if isinstance(p, str) and p == email:
+              return "already_booked"
 
-       if not is_trainer and fitness_class[AVAILABLE_SLOTS] <= 0:
-           return "class_full"
-
+       if not is_trainer and fitness_class.get(AVAILABLE_SLOTS, 0) <= 0:
+          return "class_full"
+       
        try:
            oid = ObjectId(class_id)
        except Exception:
            return "not_found"
 
-       update: dict = {"$push": {PARTICIPANTS: user_id}}
+       update: dict = {"$push": {PARTICIPANTS: participant}}
        if not is_trainer:
            update["$inc"] = {AVAILABLE_SLOTS: -1}
 
@@ -60,7 +64,7 @@ class FitnessClassResource:
        return "ok"
 
    def get_participants(self, class_id: str):
-       fitness_class = self.get_class_by_id(class_id)
+       fitness_class = self.get_fitness_class_by_id(class_id)
        if fitness_class is None:
            return None
        return fitness_class.get(PARTICIPANTS, [])

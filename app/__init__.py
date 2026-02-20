@@ -6,6 +6,7 @@ from app.db import DB
 from http import HTTPStatus
 from flask import Flask
 from flask_restx import Api
+from flask_jwt_extended import JWTManager
 
 
 def create_app():
@@ -13,6 +14,7 @@ def create_app():
     app.config.from_object(Config)
 
     DB.init_app(app)
+    JWTManager(app)
 
     api = Api(
         title="Fitness Class Management and Booking System",
