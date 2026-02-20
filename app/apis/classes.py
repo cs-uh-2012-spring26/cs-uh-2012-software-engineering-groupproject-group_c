@@ -205,3 +205,29 @@ class BookClass(Resource):
 
 
        return {MSG: "Class booked successfully"}, HTTPStatus.OK
+   
+@api.route("/<string:class_id>/participants")
+@api.param("class_id", "The fitness class identifier")
+class ClassParticipants(Resource):
+   @api.doc(description="View participants of a fitness class. Admin only.", security="Bearer Auth")
+   @api.response(HTTPStatus.OK, "Success")
+   @api.response(HTTPStatus.UNAUTHORIZED, "Not authenticated")
+   @api.response(HTTPStatus.FORBIDDEN, "Admin role required")
+   @api.response(HTTPStatus.NOT_FOUND, "Class not found")
+   @jwt_required()
+   def get(self, class_id):
+       """View participants of a fitness class (admin, Bearer token required)"""
+       claims = get_jwt()
+       if claims.get("role") != "admin":
+           return {MSG: "Admin role required"}, HTTPStatus.FORBIDDEN
+
+
+       fitness_class_resource = FitnessClassResource()
+       participants = fitness_class_resource.get_participants(class_id)
+
+
+       if participants is None:
+           return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
+
+
+       return {MSG: participants}, HTTPStatus.OK
