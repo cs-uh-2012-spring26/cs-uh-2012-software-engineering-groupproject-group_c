@@ -145,3 +145,63 @@ class FitnessClassList(Resource):
            location, trainer, capacity, created_by,
        )
        return {MSG: f"Fitness class created with id: {class_id}"}, HTTPStatus.CREATED
+
+@api.route("/<string:class_id>/book")
+@api.param("class_id", "The fitness class identifier")
+class BookClass(Resource):
+   @api.doc(description="Book a fitness class. Member only.", security="Bearer Auth")
+   @api.response(HTTPStatus.OK, "Booking successful")
+   @api.response(HTTPStatus.BAD_REQUEST, "Validation error")
+   @api.response(HTTPStatus.UNAUTHORIZED, "Not authenticated")
+   @api.response(HTTPStatus.FORBIDDEN, "Member role required")
+   @api.response(HTTPStatus.NOT_FOUND, "Class not found")
+   @jwt_required()
+   def post(self, class_id):
+       """Book a fitness class (member, Bearer token required)"""
+       claims = get_jwt()
+       role = claims.get("role")
+       if role != "member":
+           return {MSG: "Member role required to book a class"}, HTTPStatus.FORBIDDEN
+
+
+       fitness_class_resource = FitnessClassResource()
+       fitness_class = fitness_class_resource.get_fitness_class_by_id(class_id)
+
+
+       if fitness_class is None:
+           return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
+
+
+       class_start = _parse_class_datetime(fitness_class)
+       if class_start is not None:
+           booking_deadline = class_start + timedelta(minutes=30)
+           if datetime.now() > booking_deadline:
+               return {MSG: "Booking deadline has passed (30 minutes after class start)"}, HTTPStatus.BAD_REQUEST
+
+
+       user_email = claims.get("email", "")
+       user_resource = UserResource()
+       user = user_resource.get_user_by_email(user_email)
+       if user is None:
+           return {MSG: "User not found"}, HTTPStatus.NOT_FOUND
+
+
+       participant = {
+           "name": user.get("name", ""),
+           "email": user.get("email", ""),
+           "phone": user.get("phone", ""),
+       }
+
+
+       result = fitness_class_resource.book_class(class_id, participant)
+
+
+       if result == "not_found":
+           return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
+       if result == "already_booked":
+           return {MSG: "You have already booked this class"}, HTTPStatus.BAD_REQUEST
+       if result == "class_full":
+           return {MSG: "Class is full, no available spots"}, HTTPStatus.BAD_REQUEST
+
+
+       return {MSG: "Class booked successfully"}, HTTPStatus.OK
