@@ -36,7 +36,7 @@ class FitnessClassResource:
        return str(result.inserted_id)
 
    def book_class(self, class_id: str, participant: dict, is_trainer: bool = False):
-       fitness_class = self.get_class_by_id(class_id)
+       fitness_class = self.get_fitness_class_by_id(class_id)
        if fitness_class is None:
            return "not_found"
 
