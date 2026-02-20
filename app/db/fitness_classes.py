@@ -23,8 +23,12 @@ class FitnessClassResource:
        self.collection = DB.get_collection(FITNESS_CLASS)
 
    def get_fitness_classes(self):
-       classes = self.collection.find({})
-       return serialize_items(list(classes))
+      classes = self.collection.find({})
+      classes_without_participants = []
+      for c in classes:
+          c.pop(PARTICIPANTS, None)
+          classes_without_participants.append(c)
+      return serialize_items(classes_without_participants)
 
    def create_fitness_class(self, name: str, description: str, date: str, start_time: str, end_time: str, location: str, trainer: str,
        capacity: int, created_by: str):
