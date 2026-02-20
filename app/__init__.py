@@ -18,6 +18,16 @@ def create_app():
         title="Fitness Class Management and Booking System",
         version="1.0",
         description="A simple Fitness Class Management and Booking System  API",
+        authorizations = 
+        {
+            "Bearer Auth": 
+            {
+                "type": "apiKey",
+                "in": "header",
+                "name": "Authorization",
+                "description": "Enter: Bearer <JWT code>",
+            }
+        }
     )
 
     api.init_app(app)
