@@ -181,21 +181,16 @@ Sprint 1 focuses only on core backend functionality. The following features are 
 
 ### Main Success Scenario:
 1. Member selects a class.  
-2. System checks that the class has available spots.  
-3. System verifies that the class start time is not more than 30 minutes past.  
-4. System records the booking.  
-5. System decreases the available spots.  
-6. Booking confirmation is returned.
+2. System checks that the class has available spots.   
+3. System records the booking.  
+4. System decreases the available spots.  
+5. Booking confirmation is returned.
 
 ### Extensions:
-- 1a. Member is not authenticated.  
-  - 1a1. System redirects to sign up or login.  
 - 2a. Class has no available spots.  
   - 2a1. Booking is rejected.  
-- 3a. Class started more than 30 minutes ago.  
-  - 3a1. Booking is rejected.  
-- 1b. Member has already booked the class.  
-  - 1b1. Booking is rejected.  
+- 1a. Member has already booked the class.  
+  - 1a1. Booking is rejected.  
 
 ### Postconditions:
 - Member is recorded in participant list.
@@ -236,9 +231,7 @@ Sprint 1 focuses only on core backend functionality. The following features are 
 - Only Trainers/Admins can create classes.
 - Class capacity is specified at creation time.
 - Members may book unlimited classes.
-- Booking is allowed up to 30 minutes after class start.
 - Full classes must still appear in listings.
-- No cancellation or withdrawal is supported.
 
 ---
 
@@ -248,7 +241,6 @@ Sprint 1 focuses only on core backend functionality. The following features are 
 - No third-party authentication.
 - No email verification required.
 - System must enforce capacity limits.
-- System must enforce 30-minute booking cutoff.
 
 ---
 
