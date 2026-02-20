@@ -27,10 +27,10 @@ class FitnessClassResource:
        return serialize_items(list(classes))
 
    def create_fitness_class(self, name: str, description: str, date: str, start_time: str, end_time: str, location: str, trainer: str,
-       capacity: int,created_by: str):
+       capacity: int, created_by: str):
 
        fitness_class = {NAME: name, DESCRIPTION: description, DATE: date, START_TIME: start_time, END_TIME: end_time, LOCATION: location,
-       TRAINER: trainer, CAPACITY: capacity, AVAILABLE_SLOTS: available_slots, PARTICIPANTS: [], CREATED_BY: created_by}
+       TRAINER: trainer, CAPACITY: capacity, AVAILABLE_SLOTS: capacity, PARTICIPANTS: [], CREATED_BY: created_by}
 
        result = self.collection.insert_one(fitness_class)
        return str(result.inserted_id)

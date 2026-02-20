@@ -1,7 +1,8 @@
 from flask_restx import Namespace, Resource, fields
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.apis import MSG
-from app.db.fitness_class import FitnessClassResource
-from app.db.fitness_class import NAME, DESCRIPTION, DATE, START_TIME, END_TIME, LOCATION, TRAINER, CAPACITY
+from app.db.fitness_classes import FitnessClassResource
+from app.db.fitness_classes import NAME, DESCRIPTION, DATE, START_TIME, END_TIME, LOCATION, TRAINER, CAPACITY, AVAILABLE_SLOTS, PARTICIPANTS, CREATED_BY
 from http import HTTPStatus
 from flask import request
 
@@ -32,48 +33,36 @@ CLASS_CREATE_FLDS = api.model(
         LOCATION: fields.String(example=_EXAMPLE_CLASS_1[LOCATION]),
         TRAINER: fields.String(example=_EXAMPLE_CLASS_1[TRAINER]),
         CAPACITY: fields.Integer(example=_EXAMPLE_CLASS_1[CAPACITY]),
+        AVAILABLE_SLOTS: fields.Integer(example=_EXAMPLE_CLASS_1[AVAILABLE_SLOTS]),
+        PARTICIPANTS: fields.List(fields.String, example=_EXAMPLE_CLASS_1[PARTICIPANTS]),
+        CREATED_BY: fields.String(example=_EXAMPLE_CLASS_1[CREATED_BY]),
     },
 )
 
 
 @api.route("/")
 class FitnessClassList(Resource):
-    @api.doc(
-        params={
-            "name": "Filter class list by class name (partial matches allowed)",
-            "description": "Filter class list by class description (partial matches allowed)",
-            "date": "Filter class list by class date (Exact date match)",
-            "start_time": "Filter class list by class start time (Exact time match)",
-            "end_time": "Filter class list by class end time (Exact time match)",
-            "location": "Filter class list by class location (partial matches allowed)",
-            "trainer": "Filter class list by class trainer (partial matches allowed)",
-            "capacity": "Filter class list by class capacity (Exact capacity match)",
-            "available_slots": "Filter class list by class available slots (Exact available slots match)",
-            "participants": "Filter class list by class participants (partial matches allowed)",
-            "created_by": "Filter class list by class created by (partial matches allowed)",
-        }
-    )
+    @api.doc(description=" Returns all fitness classes. Accessible to guests, members, and admins.")
     @api.response(
         HTTPStatus.OK,
         "Success",
         api.model(
-            "All Students",
+            "All Fitness Classes",
             {
                 MSG: fields.List(
-                    fields.Nested(STUDENT_CREATE_FLDS),
-                    example=[_EXAMPLE_STUDENT_1, _EXAMPLE_STUDENT_2],
+                    fields.Nested(CLASS_CREATE_FLDS),
+                    example=[_EXAMPLE_CLASS_1],
                 )
             },
         ),
     )
     def get(self):
-        name = request.args.get("name")
-        seniority = request.args.get("seniority")
-        student_resource = StudentResource()
-        student_list = student_resource.get_students(name, seniority)
-        return {MSG: student_list}, HTTPStatus.OK
+        fitness_class_resource = FitnessClassResource()
+        class_list = fitness_class_resource.get_fitness_classes()
+        return {MSG: class_list}, HTTPStatus.OK
 
-    @api.expect(FITNESS_CLASS_CREATE_FLDS)
+    @api.expect(CLASS_CREATE_FLDS)
+    @api.doc(security='Bearer Auth')
     @api.response(
         HTTPStatus.OK,
         "Success",
@@ -98,6 +87,7 @@ class FitnessClassList(Resource):
             {MSG: fields.String("Admin or trainer access required")},
         ),
     )
+    @jwt_required()
     def post(self):
         assert isinstance(request.json, dict)
         name = request.json.get(NAME)
@@ -122,7 +112,7 @@ class FitnessClassList(Resource):
                 MSG: "Invalid value provided for one of the fields"
             }, HTTPStatus.NOT_ACCEPTABLE
 
-        current_user = get_current_user()
+        current_user = get_jwt_identity()
         fitness_class_resource = FitnessClassResource()
         class_id = fitness_class_resource.create_fitness_class(
             name, description, date, start_time,
@@ -131,63 +121,63 @@ class FitnessClassList(Resource):
         return {MSG: f"Fitness class created with id: {class_id}"}, HTTPStatus.OK
 
 
-@api.route("/<email>")
-@api.param("email", "Student email to use for lookup")
-@api.response(
-    HTTPStatus.NOT_FOUND,
-    "Student Not Found",
-    api.model("Student: Not Found", {MSG: fields.String("Student not found")}),
-)
-class Student(Resource):
-    @api.doc("Get a specific student, identified by email")
-    @api.response(HTTPStatus.OK, "Success", STUDENT_CREATE_FLDS)
-    def get(self, email):
-        student_resource = StudentResource()
-        student = student_resource.get_student_by_email(email)
+# @api.route("/<email>")
+# @api.param("email", "Student email to use for lookup")
+# @api.response(
+#     HTTPStatus.NOT_FOUND,
+#     "Student Not Found",
+#     api.model("Student: Not Found", {MSG: fields.String("Student not found")}),
+# )
+# class Student(Resource):
+#     @api.doc("Get a specific student, identified by email")
+#     @api.response(HTTPStatus.OK, "Success", STUDENT_CREATE_FLDS)
+#     def get(self, email):
+#         student_resource = StudentResource()
+#         student = student_resource.get_student_by_email(email)
 
-        if student is None:
-            return {MSG: "Student not found"}, HTTPStatus.NOT_FOUND
+#         if student is None:
+#             return {MSG: "Student not found"}, HTTPStatus.NOT_FOUND
 
-        return {MSG: student}, HTTPStatus.OK
+#         return {MSG: student}, HTTPStatus.OK
 
-    @api.expect(STUDENT_CREATE_FLDS)
-    @api.doc("Update a specific student, identified by email")
-    @api.response(
-        HTTPStatus.OK,
-        "Success",
-        api.model("Update Student", {MSG: fields.String("Student updated")}),
-    )
-    @api.response(
-        HTTPStatus.NOT_ACCEPTABLE,
-        "Student Update Information Not Acceptable",
-        api.model(
-            "Update Student: Not Acceptable",
-            {MSG: fields.String("Invalid value provided for one of the fields")},
-        ),
-    )
-    def put(self, email):
-        assert isinstance(request.json, dict)
-        name = request.json.get(NAME)
-        seniority = request.json.get(SENIORITY)
-        new_email = request.json.get(EMAIL)
-        if not (
-            isinstance(name, str)
-            and len(name) > 0
-            and isinstance(new_email, str)
-            and len(new_email) > 0
-            and isinstance(seniority, str)
-            and seniority.lower() in ["first-year", "sophomore", "junior", "senior"]
-        ):
-            return {
-                MSG: "Invalid value provided for one of the fields"
-            }, HTTPStatus.NOT_ACCEPTABLE
+#     @api.expect(STUDENT_CREATE_FLDS)
+#     @api.doc("Update a specific student, identified by email")
+#     @api.response(
+#         HTTPStatus.OK,
+#         "Success",
+#         api.model("Update Student", {MSG: fields.String("Student updated")}),
+#     )
+#     @api.response(
+#         HTTPStatus.NOT_ACCEPTABLE,
+#         "Student Update Information Not Acceptable",
+#         api.model(
+#             "Update Student: Not Acceptable",
+#             {MSG: fields.String("Invalid value provided for one of the fields")},
+#         ),
+#     )
+#     def put(self, email):
+#         assert isinstance(request.json, dict)
+#         name = request.json.get(NAME)
+#         seniority = request.json.get(SENIORITY)
+#         new_email = request.json.get(EMAIL)
+#         if not (
+#             isinstance(name, str)
+#             and len(name) > 0
+#             and isinstance(new_email, str)
+#             and len(new_email) > 0
+#             and isinstance(seniority, str)
+#             and seniority.lower() in ["first-year", "sophomore", "junior", "senior"]
+#         ):
+#             return {
+#                 MSG: "Invalid value provided for one of the fields"
+#             }, HTTPStatus.NOT_ACCEPTABLE
 
-        student_resource = StudentResource()
-        updated_student = student_resource.update_student(
-            email, name, new_email, seniority
-        )
+#         student_resource = StudentResource()
+#         updated_student = student_resource.update_student(
+#             email, name, new_email, seniority
+#         )
 
-        if updated_student is None:
-            return {MSG: "Student not found"}, HTTPStatus.NOT_FOUND
+#         if updated_student is None:
+#             return {MSG: "Student not found"}, HTTPStatus.NOT_FOUND
 
-        return {MSG: "Student updated"}, HTTPStatus.OK
+#         return {MSG: "Student updated"}, HTTPStatus.OK
