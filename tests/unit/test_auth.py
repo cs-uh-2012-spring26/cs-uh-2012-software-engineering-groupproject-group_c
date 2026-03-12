@@ -134,3 +134,22 @@ def test_login_empty_body(client):
                        data="", content_type="application/json")
     assert resp.status_code in (HTTPStatus.BAD_REQUEST,
                                 HTTPStatus.INTERNAL_SERVER_ERROR)
+
+def test_register_unexpected_exception(client):
+    """Covers auth.py lines 78-79: generic Exception during registration.
+    Uses MagicMock + fixture injection — no @patch."""
+    original = auth_module.UserResource
+    mock_ur_cls = MagicMock()
+    mock_ur_cls.return_value.register_user.side_effect = Exception("DB crash")
+    auth_module.UserResource = mock_ur_cls
+
+    try:
+        resp = client.post("/auth/register", json={
+            "name": "John", "email": "john@test.com",
+            "phone": "+123", "password": "pass123",
+        })
+        assert resp.status_code == HTTPStatus.BAD_REQUEST
+        assert "Registration failed" in resp.get_json()["message"]
+    finally:
+        auth_module.UserResource = original
+        
