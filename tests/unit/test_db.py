@@ -41,3 +41,45 @@ def test_get_user_by_id():
     user = ur.get_user_by_id(str(user_id))
     assert user is not None
     assert user["email"] == "alice@test.com"
+
+def test_get_user_by_id_not_found():
+    ur = UserResource()
+    user = ur.get_user_by_id("000000000000000000000000")
+    assert user is None
+
+
+def test_get_user_by_id_invalid():
+    ur = UserResource()
+    user = ur.get_user_by_id("bad-id")
+    assert user is None
+
+
+def test_delete_all_users():
+    ur = UserResource()
+    ur.create_user("Alice", "alice@test.com", "+1", "member", "pass123")
+    ur.delete_all_users()
+    assert ur.get_users() == []
+
+
+def test_add_multiple_users():
+    ur = UserResource()
+    ur.add_multiple_users([
+        {"name": "A", "email": "a@t.com", "phone": "+1", "role": "member"},
+        {"name": "B", "email": "b@t.com", "phone": "+2", "role": "admin"},
+    ])
+    assert len(ur.get_users()) == 2
+
+
+def test_add_multiple_users_empty():
+    ur = UserResource()
+    ur.add_multiple_users([])
+    assert ur.get_users() == []
+
+
+def test_create_user_with_optional_fields():
+    ur = UserResource()
+    user_id = ur.create_user("Alice", "alice@test.com", "+1", "member",
+                             "pass123", birthdate="2000-01-01", gender="female")
+    user = ur.get_user_by_id(str(user_id))
+    assert user["birthdate"] == "2000-01-01"
+    assert user["gender"] == "female"
