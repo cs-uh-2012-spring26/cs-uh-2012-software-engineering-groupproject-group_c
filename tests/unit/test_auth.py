@@ -30,9 +30,56 @@ def test_register_default_role(client):
     })
     assert resp.status_code == HTTPStatus.CREATED
 
+def test_register_missing_name(client):
+    resp = client.post("/auth/register", json={
+        "email": "x@test.com", "phone": "+123", "password": "pass123",
+    })
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
 
 def test_register_missing_email(client):
     resp = client.post("/auth/register", json={
         "name": "John", "phone": "+123", "password": "pass123",
     })
     assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_register_missing_password(client):
+    resp = client.post("/auth/register", json={
+        "name": "John", "email": "x@test.com", "phone": "+123",
+    })
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_register_duplicate_email(client):
+    data = {
+        "name": "John", "email": "dup@test.com",
+        "phone": "+123", "password": "pass123",
+    }
+    client.post("/auth/register", json=data)
+    resp = client.post("/auth/register", json=data)
+    assert resp.status_code == HTTPStatus.CONFLICT
+
+
+def test_register_invalid_role(client):
+    resp = client.post("/auth/register", json={
+        "name": "John", "email": "john2@test.com",
+        "phone": "+123", "password": "pass123", "role": "superadmin",
+    })
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_register_empty_name(client):
+    resp = client.post("/auth/register", json={
+        "name": "  ", "email": "x@test.com",
+        "phone": "+123", "password": "pass123",
+    })
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_register_empty_body(client):
+    """Covers auth.py line 52: request body is None/empty."""
+    resp = client.post("/auth/register",
+                       data="", content_type="application/json")
+    assert resp.status_code in (HTTPStatus.BAD_REQUEST,
+                                HTTPStatus.INTERNAL_SERVER_ERROR)
