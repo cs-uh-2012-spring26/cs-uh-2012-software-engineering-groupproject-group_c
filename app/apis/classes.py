@@ -231,3 +231,50 @@ class ClassParticipants(Resource):
 
 
        return {MSG: participants}, HTTPStatus.OK
+
+@api.route("/<string:class_id>/remind")
+@api.param("class_id", "The fitness class identifier")
+class ClassReminder(Resource):
+  @api.doc(description="Send reminder emails to class participants. Trainer/Admin only.", security="Bearer Auth")
+  @api.response(HTTPStatus.OK, "Reminders sent")
+  @api.response(HTTPStatus.NOT_FOUND, "Class not found")
+  @api.response(HTTPStatus.BAD_REQUEST, "No participants or class already started")
+  @api.response(HTTPStatus.FORBIDDEN, "Trainer or Admin role required")
+  @jwt_required()
+  def post(self, class_id):
+      """Send reminder emails to all participants (trainer/admin, Bearer token required)"""
+      claims = get_jwt()
+      role = claims.get("role")
+      if role not in ("trainer", "admin"):
+          return {MSG: "Trainer or Admin role required"}, HTTPStatus.FORBIDDEN
+
+
+      fitness_class_resource = FitnessClassResource()
+      fitness_class = fitness_class_resource.get_fitness_class_by_id(class_id)
+
+
+      if fitness_class is None:
+          return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
+
+
+      class_start = _parse_class_datetime(fitness_class)
+      if class_start is not None and datetime.now() > class_start:
+          return {MSG: "Cannot send reminders for a class that has already started"}, HTTPStatus.BAD_REQUEST
+
+
+      participants = fitness_class.get(PARTICIPANTS, [])
+      if not participants:
+          return {MSG: "No participants to remind"}, HTTPStatus.BAD_REQUEST
+
+
+      from app.services.email_service import EmailService
+      email_service = EmailService()
+      try:
+          sent_count = email_service.send_class_reminders(fitness_class)
+      except Exception as e:
+          return {MSG: f"Failed to send reminders: {str(e)}"}, HTTPStatus.INTERNAL_SERVER_ERROR
+
+
+      return {MSG: f"Reminders sent to {sent_count} participants"}, HTTPStatus.OK
+
+
