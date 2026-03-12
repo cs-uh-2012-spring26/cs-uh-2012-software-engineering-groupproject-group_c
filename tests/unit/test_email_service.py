@@ -33,3 +33,10 @@ def test_send_class_reminders_multiple_participants():
     assert count == 2
     assert mock_client.send_email.call_count == 2
 
+def test_send_class_reminders_empty():
+    mock_client = MagicMock()
+    service = EmailService(ses_client=mock_client, sender="gym@example.com")
+    count = service.send_class_reminders({"participants": []})
+    assert count == 0
+    mock_client.send_email.assert_not_called()
+
