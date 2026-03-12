@@ -231,3 +231,17 @@ class ClassParticipants(Resource):
 
 
        return {MSG: participants}, HTTPStatus.OK
+
+@api.route("/<string:class_id>/remind")
+@api.param("class_id", "The fitness class identifier")
+class ClassReminder(Resource):
+  @api.doc(description="Send reminder emails to class participants. Trainer/Admin only.", security="Bearer Auth")
+  @api.response(HTTPStatus.OK, "Reminders sent")
+  @api.response(HTTPStatus.NOT_FOUND, "Class not found")
+  @api.response(HTTPStatus.BAD_REQUEST, "No participants or class already started")
+  @api.response(HTTPStatus.FORBIDDEN, "Trainer or Admin role required")
+  @jwt_required()
+  def post(self, class_id):
+      """Send reminder emails to all participants (trainer/admin, Bearer token required)"""
+      pass
+
