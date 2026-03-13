@@ -21,3 +21,15 @@ def test_book_class_decrements_slots(client, member_token, admin_token, created_
                     headers=auth_header(admin_token))
     assert resp.status_code == HTTPStatus.OK
     assert len(resp.get_json()["message"]) == 1
+
+def test_book_class_forbidden_admin(client, admin_token, created_class_id):
+    resp = client.post(f"/classes/{created_class_id}/book",
+                       headers=auth_header(admin_token))
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_book_class_forbidden_trainer(client, trainer_token, created_class_id):
+    resp = client.post(f"/classes/{created_class_id}/book",
+                       headers=auth_header(trainer_token))
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+    
