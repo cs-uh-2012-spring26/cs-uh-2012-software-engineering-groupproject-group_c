@@ -9,6 +9,7 @@ def test_get_all_classes_returns_ok(client):
     assert "message" in data
     assert isinstance(data["message"], list)
 
+
 def test_get_all_classes_empty(client):
     response = client.get("/classes/")
     assert response.get_json()["message"] == []
@@ -25,7 +26,6 @@ def test_get_all_classes_with_data(client, admin_token):
     names = {c["name"] for c in classes}
     assert names == {"Yoga", "Pilates"}
 
-
 def test_get_all_classes_excludes_participants(client, admin_token):
     client.post("/classes/", json=sample_class_data(),
                 headers=auth_header(admin_token))
@@ -41,6 +41,7 @@ def test_create_class_success(client, admin_token):
     assert resp.status_code == HTTPStatus.CREATED
     assert "created with id" in resp.get_json()["message"]
 
+
 def test_create_class_forbidden_member(client, member_token):
     resp = client.post("/classes/", json=sample_class_data(),
                        headers=auth_header(member_token))
@@ -55,7 +56,6 @@ def test_create_class_forbidden_trainer(client, trainer_token):
 
 def test_create_class_no_auth(client):
     resp = client.post("/classes/", json=sample_class_data())
-    # App's generic error handler catches JWT NoAuthorizationError as 500
     assert resp.status_code in (HTTPStatus.UNAUTHORIZED,
                                 HTTPStatus.INTERNAL_SERVER_ERROR)
 
@@ -70,3 +70,48 @@ def test_create_class_invalid_capacity_negative(client, admin_token):
     resp = client.post("/classes/", json=sample_class_data(capacity=-1),
                        headers=auth_header(admin_token))
     assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_create_class_past_date(client, admin_token):
+    resp = client.post("/classes/", json=sample_class_data(date=past_date_str()),
+                       headers=auth_header(admin_token))
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
+def test_create_class_invalid_date_format(client, admin_token):
+    resp = client.post("/classes/", json=sample_class_data(date="not-a-date"),
+                       headers=auth_header(admin_token))
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+def test_get_participants_success(client, admin_token, created_class_id):
+    resp = client.get(f"/classes/{created_class_id}/participants",
+                      headers=auth_header(admin_token))
+    assert resp.status_code == HTTPStatus.OK
+    assert isinstance(resp.get_json()["message"], list)
+
+
+def test_get_participants_forbidden_member(client, member_token, created_class_id):
+    resp = client.get(f"/classes/{created_class_id}/participants",
+                      headers=auth_header(member_token))
+    assert resp.status_code == HTTPStatus.FORBIDDEN
+
+
+def test_get_participants_not_found(client, admin_token):
+    resp = client.get("/classes/000000000000000000000000/participants",
+                      headers=auth_header(admin_token))
+    assert resp.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_get_participants_invalid_id(client, admin_token):
+    resp = client.get("/classes/invalid-id/participants",
+                      headers=auth_header(admin_token))
+    assert resp.status_code == HTTPStatus.NOT_FOUND
+
+
+def test_create_class_non_dict_body(client, admin_token):
+    resp = client.post("/classes/", data="[1,2,3]",
+                       content_type="application/json",
+                       headers=auth_header(admin_token))
+    assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+
