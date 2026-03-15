@@ -1,52 +1,92 @@
 import pytest
-from dotenv import load_dotenv
+import os
 import yaml
+from unittest.mock import MagicMock
+from dotenv import load_dotenv
+from pathlib import Path
+
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+# to force mock db for tests
+os.environ["MOCK_DB"] = "true" 
 
 from app import create_app
 from app.db import DB
+import app.apis.classes as classes_module
+import app.apis.auth as auth_module
+from tests.utils import auth_header, sample_class_data
 
 
 @pytest.fixture(scope="session", autouse=True)
 def app():
-    load_dotenv()
     app = create_app()
     yield app
 
 
+@pytest.fixture(autouse=True)
+def clean_db(app):
+    DB.get_collection("users").delete_many({})
+    DB.get_collection("fitness_class").delete_many({})
+    yield
+
 @pytest.fixture
 def client(app):
     return app.test_client()
-
 
 @pytest.fixture(scope="session")
 def runner(app):
     return app.test_cli_runner()
 
 
-# def load_students():
-#     """
-#     Load student data from the YAML fixture file.
-#     """
-#     with open("tests/unit/fixtures/students.yaml", "r") as file:
-#         students = yaml.safe_load(file)
+@pytest.fixture(autouse=True)
+def mock_email_service():
+    import app.services.email_service as email_module
+    original_cls = email_module.EmailService
 
-#     return students
+    mock_cls = MagicMock()
+    mock_instance = MagicMock()
+    mock_cls.return_value = mock_instance
+    mock_instance.send_class_reminders.return_value = 1
 
-
-# @pytest.fixture(scope="session")
-# def students():
-#     return load_students()
-
-
-# @pytest.fixture(scope="function", autouse=True)
-# def seeded_students_db(students):
-#     """
-#     Preload the mock 'students' collection with data from the YAML fixture.
-#     """
-#     student_resource.delete_all_students()  # Clear existing data
-#     student_resource.add_multiple_students(students)
+    email_module.EmailService = mock_cls
+    yield mock_instance
+    email_module.EmailService = original_cls
 
 
-# @pytest.fixture(scope="function", params=load_students())
-# def single_student(request):
-#     return request.param
+def _get_token(client, name, email, phone, password, role="member"):
+    client.post("/auth/register", json={
+        "name": name,
+        "email": email,
+        "phone": phone,
+        "password": password,
+        "role": role,
+    })
+    resp = client.post("/auth/login", json={
+        "email": email,
+        "password": password,
+    })
+    return resp.get_json()["access_token"]
+
+
+@pytest.fixture
+def member_token(client):
+    return _get_token(client, "Test Member", "member@test.com",
+                      "+1234567890", "pass123", "member")
+
+
+@pytest.fixture
+def admin_token(client):
+    return _get_token(client, "Test Admin", "admin@test.com",
+                      "+1234567890", "pass123", "admin")
+
+
+@pytest.fixture
+def trainer_token(client):
+    return _get_token(client, "Test Trainer", "trainer@test.com",
+                      "+1234567890", "pass123", "trainer")
+
+
+@pytest.fixture
+def created_class_id(client, admin_token):
+    resp = client.post("/classes/", json=sample_class_data(),
+                       headers=auth_header(admin_token))
+    return resp.get_json()["message"].split("id: ")[1]
