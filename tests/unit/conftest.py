@@ -1,13 +1,15 @@
 import pytest
 import os
+import mongomock
 import yaml
 from unittest.mock import MagicMock
 from dotenv import load_dotenv
 from pathlib import Path
 
-load_dotenv(Path(__file__).resolve().parents[2] / ".env")
+
 # to force mock db for tests
 os.environ["MOCK_DB"] = "true" 
+os.environ["TESTING"] = "true"
 
 from app import create_app
 from app.db import DB
@@ -15,10 +17,20 @@ import app.apis.classes as classes_module
 import app.apis.auth as auth_module
 from tests.utils import auth_header, sample_class_data
 
+@pytest.fixture(scope="session", autouse=True)
+def mock_db():
+    mock_client = mongomock.MongoClient()
+    mock_database = mock_client["test_database"]
+
+    DB.client = mock_client
+    DB.db = mock_database
+
+    yield mock_database
 
 @pytest.fixture(scope="session", autouse=True)
-def app():
+def app(mock_db):
     app = create_app()
+    app.config["TESTING"] = True
     yield app
 
 
