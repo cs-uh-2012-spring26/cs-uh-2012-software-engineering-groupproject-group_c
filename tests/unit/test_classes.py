@@ -1,4 +1,5 @@
 from http import HTTPStatus
+from tests.utils import auth_header, sample_class_data, past_date_str
 
 
 def test_get_all_classes_returns_ok(client):
