@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      MOCK_DB: ${{ secrets.MOCK_DB }}
+      DEBUG: ${{ secrets.DEBUG }}
+      JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests with coverage
+        run: pytest -vv --cov=app --cov-report=term-missing tests/
