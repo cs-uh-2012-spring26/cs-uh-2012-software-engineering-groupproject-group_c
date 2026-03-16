@@ -84,6 +84,39 @@ To deactivate the virtual environment:
 deactivate
 ```
 
+## Email Reminder Feature
+
+The API supports sending reminder emails to participants booked for a class via the `POST /classes/<class_id>/remind` endpoint. This requires an AWS account with Simple Email Service (SES) configured.
+
+### AWS SES Setup
+
+1. Create an [AWS account](https://aws.amazon.com/) if you don't have one.
+2. Go to the [Amazon SES console](https://aws.amazon.com/ses/) and verify the sender email address you want to use.
+3. If your account is in the SES sandbox, you must also verify any recipient email addresses before sending.
+4. Create AWS access credentials (Access Key ID and Secret Access Key) for a user with SES send permissions.
+
+### Environment Variables for Email
+
+Add the following to your `.env` file (see `.samplenv` for the full template):
+
+```
+SES_SENDER_EMAIL="your-verified-sender@example.com"
+AWS_SES_REGION="us-east-1"  
+```
+
+```sh
+aws configure
+```
+
+Alternatively, set them as environment variables:
+
+```sh
+export AWS_ACCESS_KEY_ID="your-access-key-id"
+export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
+```
+
+> **Note:** In unit tests, the email service is mocked and no actual emails are sent. You do not need AWS credentials to run the test suite.
+
 ## Best Practices
 
 See [/docs/BestPractices.md](/docs/BestPractices.md) for advice regarding branch naming and other useful tips.
