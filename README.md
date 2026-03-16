@@ -1,3 +1,5 @@
+[![CI](https://github.com/cs-uh-2012-spring26/cs-uh-2012-software-engineering-groupproject-group_c/actions/workflows/ci.yml/badge.svg)](https://github.com/cs-uh-2012-spring26/cs-uh-2012-software-engineering-groupproject-group_c/actions/workflows/ci.yml)
+
 # Fitness Class Management and Booking API
 
 This is a repo for a Fitness Class Management and Booking API. The API manages user authentication, Class booking and Class listing
