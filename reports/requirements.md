@@ -1,4 +1,39 @@
-# Fitness Class Management and Booking System  
+# Fitness Class Management and Booking System 
+
+## Sprint 2 - Requirements Document 
+
+Sprint 2 focusses on adding testing to the functunalities that already exist. It also adds one more feature, now allowing Trainers and the Admin to send reminders to parcipants of a class.
+
+---
+
+## Use Case 5: Send Class Reminders  
+
+**Primary Actor:** Trainer or Admin  
+
+### Preconditions:
+- Actor is authenticated.
+- Actor has Trainer or Admin privileges.
+- Selected class exists.
+
+### Main Success Scenario:
+1. Actor selects a specific class and triggers the “Send Reminders” action.
+2. System verifies that the class has at least one registered participant.
+3. System verifies that the class start time has not already passed.
+4. System retrieves the participant list (names and email addresses).
+5. System iterates through the participants and sends an email containing the class name, date, time, and location using the Email Service.
+6. System returns a confirmation message indicating the total number of emails successfully sent.
+
+### Extensions:
+- **2a. No participants are registered for the class.** - 2a1. System rejects the request and displays a "No participants to remind" error.
+- **3a. The class has already started or ended.** - 3a1. System rejects the request and displays a "Cannot send reminders for a class that has already started" error.
+- **5a. The Email Service (AWS SES) fails to send an email for a specific user.** - 5a1. System catches the exception, skips that specific user, and continues to the next participant.
+
+
+### Postconditions:
+- Email reminders are delivered to the inboxes of all registered participants.
+- The Actor receives a count of successfully sent emails.
+
+
 ## Sprint 1 – Requirements Document  
 
 ---
