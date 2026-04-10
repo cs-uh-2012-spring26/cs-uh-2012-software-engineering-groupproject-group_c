@@ -23,7 +23,20 @@ This report documents the current design of the Fitness Class Management and Boo
 
 ## 1 - Design Diagrams
 ### Class Diagram
+> Source file: `reports/classumldiag.png`
+
+
+The diagram below shows the main classes in the system and their associations across the four layers: API, Database,Service and Config.
+
 ![Class Diagram ](classumldiag.png)
+**Key associations:**
+- The four API Resource classes (`FitnessClassList`, `BookClass`, `ClassParticipants`, `ClassReminder`) depend on `FitnessClassResource` for all class-related database operations.
+- `BookClass` additionally depends on `UserResource` to retrieve the booking member's details.
+- Also `Login` and `Register` depends on `UserResource` to authenticate or add a member respectively.
+- `ClassReminder` depends on `EmailService` to send reminder emails.
+- Both `FitnessClassResource` and `UserResource` use the `DB` class to obtain their MongoDB collections.
+- `EmailService` communicates with the external AWS SES service via a boto3 client.
+- `Config` handles both `EmailService` and `DB`
 
 ### Sequence Diagram for book class endpoint
 ![Sequence Diagram for book class endpoint](files/book_class_sequence_diagram.png)
