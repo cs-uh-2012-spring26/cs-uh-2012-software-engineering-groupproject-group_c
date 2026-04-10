@@ -132,7 +132,7 @@ Sprint 1 focuses only on core backend functionality. The following features are 
 
 **System Boundary:** Fitness Class Management and Booking System
 
-![Sprint 1 Use Case Diagram](./use_case_diagram.png)  
+![Sprint 1 Use Case Diagram](files/use_case_diagram.png)  
 
 **Actors → Use Cases**
 

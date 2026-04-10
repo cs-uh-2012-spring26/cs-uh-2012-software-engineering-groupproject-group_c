@@ -116,6 +116,28 @@ export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
 ```
 
 > **Note:** In unit tests, the email service is mocked and no actual emails are sent. You do not need AWS credentials to run the test suite.
+## Design Analysis Tools (Sprint 3A)
+
+
+### Generating a Class Diagram with pyreverse
+`pyreverse` is included with `pylint` and can generate a starting class diagram from the source code.
+
+
+1. Install pylint if not already installed:
+  ```sh
+  pip install pylint
+  ```
+2. From the project root (with the virtual environment active), run:
+  ```sh
+  pyreverse -o png -p FitnessApp app/
+ ```
+3. This outputs `classes_FitnessApp.png` in the current directory. Note that the output may need manual refinement for readability.
+
+or use `PySequenceReverse Sequence Diagram Builder for Python` extension on VS Code.
+
+### Generating UML Diagrams with Planttext
+
+The Planttext diagram files for the class diagram and sequence diagrams are located in `reports/files/` that we generated and rendered the diagrams in [https://www.planttext.com/](https://www.planttext.com/)
 
 ## Best Practices
 
