@@ -223,6 +223,19 @@ This is a textbook case of duplicated code. Any logic change to how a field is e
 **Screenshot:**
 ![Long Method](./files/Long_Method.png)
 
+### Code Smell 5: *Primitive Obsession*
+
+**File:** `app/db/fitness_classes.py`<br>
+**Lines:** *(45-56)*<br>
+**Method:** `Fitness ClassResource.book_class()`
+
+**Description:**
+*The method returns plain strings ("not_found", "already_booked", "class_full", "ok") to represent what are fundamentally distinct error states. Using primitive string values to encode domair concepts is a classic smell. It prevents the compiler/interpreter from catching typos, makes the interface harder to document, and forces callers to perform string comparisons rather than handling typed exceptions or result objects.*
+
+**Screenshot:**
+![Premitive Obsession](./files/Premitive_Obsession.png)
+
+
 ---
 
 ---
