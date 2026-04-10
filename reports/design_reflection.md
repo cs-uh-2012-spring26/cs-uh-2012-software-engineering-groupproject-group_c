@@ -20,10 +20,10 @@
 ---
 
 ## 1 - Design Diagrams
-
-*(Diagram to Be inserted)*
+### ![Sequence Diagram for book class endpoint](book_class_sequence_diragram.png)
 
 ---
+
 
 ## 2 - Design Principle Violations
 
