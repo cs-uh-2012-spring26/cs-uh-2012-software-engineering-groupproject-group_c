@@ -22,6 +22,9 @@ This report documents the current design of the Fitness Class Management and Boo
 ---
 
 ## 1 - Design Diagrams
+### Class Diagram
+![Class Diagram ](classumldiag.png)
+
 ### Sequence Diagram for book class endpoint
 ![Sequence Diagram for book class endpoint](files/book_class_sequence_diagram.png)
 
