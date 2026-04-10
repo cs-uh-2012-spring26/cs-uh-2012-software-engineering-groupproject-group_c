@@ -1,5 +1,7 @@
 ## Design Reflections – Sprint 3A
 
+This report documents the current design of the Fitness Class Management and Booking System as part of Sprint 3A. The goal of this sprint is to analyze the existing design to prepare for the upcoming implementation of recurring classes (Feature 6) and configurable notifications (Feature 7).
+
 
 ## Summary
 
@@ -30,22 +32,97 @@
 
 ## 2 - Design Principle Violations
 
-### Violation 1: *(Violation Name)*
+### Violation 1: Single Responsibility Principle (SRP)
+**File:** `app/apis/classes.py` 
+**Lines:** 159–207 
+**Method:** `BookClass.post()`
 
-**Principle Violated:** *(principle name)*
+**Principle:** A class or method should have only one reason to change.
 
-**File:** `path/to/file.py`
-**Lines:** *(e.g., 45–78)*
-**Class/Method:** `ClassName.method()`
+**Screenshot:**
+![Single Responsibility Principle ](./files/single_responsibility_A.png)
+![Single Responsibility Principle ](./files/single_responsibility_B.png)
 
-**Description:**
-*(Explain what the violation is and why it breaks the principle.)*
+**Violation:** The `BookClass.post()` method currently handles at least five distinct responsibilities in a single function:
+1. Role authorization (lines 161–164)
+2. Fetching and validating the fitness class from the database (lines 167–172)
+3. Computing and checking the booking deadline (lines 175–179)
+4. Fetching the user's full profile from the database (lines 182–186)
+5. Constructing the participant object and performing the booking (lines 189–207)
 
-**Example:**
-```python
-# Actual code
-``` 
+If any one of these behaviors needs to change (e.g., the deadline window is changed, or the booking logic is updated), the entire method must be modified. These responsibilities are independent and should each have their own home for example, deadline checking and participant construction could be extracted into helper functions.
+
 ---
+
+### Violation 2: Dependency Inversion Principle (DIP)
+
+**File:** `app/apis/classes.py` 
+**Lines:** 270–271 
+**Method:** `ClassReminder.post()`
+
+**Principle:** High-level modules should not depend on low-level modules. Both should depend on abstractions.
+
+**Violation:** The high-level `ClassReminder` endpoint directly imports and instantiates the concrete `EmailService` class inside the method body:
+
+**Screenshot:**
+![Dependency Inversion Principle ](./files/dependency_inversion.png)
+
+There is no abstraction between `ClassReminder` and `EmailService`. This means `ClassReminder` is directly coupled to the concrete email implementation. If we want to send reminders via a different channel (e.g., SMS), we would have to modify this method rather than simply swapping out the dependency.
+
+---
+
+### Violation 3: Open-Closed Principle (OCP)
+
+**File:** `app/services/email_service.py` 
+**Lines:** 6–52 
+**Class:** `EmailService`
+
+**Principle:** Classes should be open for extension but closed for modification.
+
+**Screenshot:**
+![Open-Closed Principle ](./files/open_closed_principle.png)
+
+**Violation:** The `EmailService` class has no abstract base class or interface. It provides only one notification channel (email via AWS SES). Feature 7 requires users to choose between email, Telegram, SMS, and potentially other channels. Since there is no abstract `NotificationService` that other implementations could extend, adding new channels forces us to either:
+- Modify `EmailService` directly (violating the "closed for modification" rule), or
+- Create entirely unrelated classes with no shared contract.
+
+A proper design would define an abstract `NotificationService` with a `send_reminder()` method, and have `EmailService`, `SMSService`, and `TelegramService` each implement it independently.
+
+---
+
+### Violation 4: Modularity
+
+**File:** `app/apis/classes.py` 
+**Lines:** 113–120 
+**Method:** `FitnessClassList.post()`
+
+**Principle:** Related logic should be grouped into reusable, cohesive units.
+
+**Violation:** The same field extraction pattern is repeated seven times in sequence:
+
+**Screenshot:**
+![Modularity ](./files/Modularity.png)
+
+This is not modular. The same logic (safely extract a string field and strip whitespace) is repeated inline rather than extracted into a helper function. This means if the extraction logic ever needs to change, it would have to be updated in seven places. A simple helper function like `_get_str_field(data, key)` would eliminate this repetition.
+
+---
+### Violation 5: Encapsulation
+
+**File:** `app/db/fitness_classes.py` 
+**Lines:** 45–56 
+**Method:** `FitnessClassResource.book_class()`
+
+**Principle:** Internal state and implementation details should not be exposed through a class's public interface.
+
+**Violation:** The `book_class()` method communicates its result by returning raw string codes: `"not_found"`, `"already_booked"`, `"class_full"`, and `"ok"`. The calling code in `classes.py` (lines 199–204) is then required to know and match against these specific strings:
+
+**Screenshot:**
+![Encapsulation ](./files/Encapsulation.png)
+
+This leaks internal implementation details through the public interface of `FitnessClassResource`. The caller must know the exact internal string values the method may return. A better approach would be to raise domain-specific exceptions (e.g., `ClassFullError`, `AlreadyBookedError`) or return a structured result object, which would be a more encapsulated and type-safe design.
+
+---
+
 ## 3 – Code Smells
 
 ### Code Smell 1: *Duplicate Code*
