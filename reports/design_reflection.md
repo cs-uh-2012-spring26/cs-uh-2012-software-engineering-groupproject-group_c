@@ -1,5 +1,6 @@
 ## Design Reflections – Sprint 3A
 
+
 ## Summary
 
 **Tools Used:**
@@ -63,7 +64,7 @@
 
 
 ## 4 – Design Reflection on New Features
-
+    
 **New Features Being Considered:**
  >TBD
 
