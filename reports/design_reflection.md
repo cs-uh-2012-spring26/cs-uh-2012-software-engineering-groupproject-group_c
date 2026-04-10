@@ -225,8 +225,8 @@ This is a textbook case of duplicated code. Any logic change to how a field is e
 
 ### Code Smell 5: *Primitive Obsession*
 
-**File:** `app/db/fitness_classes.py`
-**Lines:** *(45-56)*
+**File:** `app/db/fitness_classes.py`<br>
+**Lines:** *(45-56)*<br>
 **Method:** `Fitness ClassResource.book_class()`
 
 **Description:**
