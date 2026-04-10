@@ -21,9 +21,9 @@
 
 ## 1 - Design Diagrams
 ### ![Sequence Diagram for book class endpoint](book_class_sequence_diragram.png)
+### ![Sequence Diagrma for remind endpoint](remind_sequence_diagram.png)
 
 ---
-
 
 ## 2 - Design Principle Violations
 
