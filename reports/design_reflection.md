@@ -14,10 +14,10 @@ This report documents the current design of the Fitness Class Management and Boo
 **Team Member Responsibilities:**
 |      Team Member   |     Responsibility    |
 |--------------------|-----------------------|
-| *Ryan Opande*      | *(TBD)*               |
-| *Nelson Mbigili*   | *(TBD)*               |
-| *Michael Girum*    | *(TBD)*               |
-| *Paul Luziga*      | *(TBD)*               |
+| *Ryan Opande*      | *Code Violations, Class Diagram assistance and new features reflection*               |
+| *Nelson Mbigili*   | *Code Smells, Sequence diagrams assistance and new features reflection*               |
+| *Michael Girum*    | *Sequence Diagrams, Code smells assistance and new features reflection*               |
+| *Paul Luziga*      | *Class Diagram, Code violations assitance and new features reflection*               |
 
 ---
 
@@ -28,7 +28,7 @@ This report documents the current design of the Fitness Class Management and Boo
 
 The diagram below shows the main classes in the system and their associations across the four layers: API, Database,Service and Config.
 
-![Class Diagram ](classumldiag.png)
+![Class Diagram ](files/classumldiag.png)
 **Key associations:**
 - The four API Resource classes (`FitnessClassList`, `BookClass`, `ClassParticipants`, `ClassReminder`) depend on `FitnessClassResource` for all class-related database operations.
 - `BookClass` additionally depends on `UserResource` to retrieve the booking member's details.
@@ -39,18 +39,48 @@ The diagram below shows the main classes in the system and their associations ac
 - `Config` handles both `EmailService` and `DB`
 
 ### Sequence Diagram for book class endpoint
+> Source file: `reports/files/book_class_sequence.png`
+
+This diagram captures the flow triggered by `POST /classes/{class_id}/book`.
 ![Sequence Diagram for book class endpoint](files/book_class_sequence_diagram.png)
 
+**Flow summary:**
+1. An authenticated Member sends a POST request with their JWT.
+2. `BookClass.post()` validates the JWT and confirms the role is `"member"`.
+3. The class is fetched from MongoDB via `FitnessClassResource`.
+4. The booking deadline (30 minutes after class start) is checked.
+5. The member's full profile is fetched from MongoDB via `UserResource`.
+6. A participant object is constructed and passed to `FitnessClassResource.book_class()`.
+7. `book_class()` checks for duplicate bookings and available slots, then updates MongoDB.
+8. A success response is returned to the client.
+
+---
+
 ### Sequence Diagram for remind endpoint
+> Source file: `reports/files/remind_sequence_diagram.png`
+
+This diagram captures the flow triggered by `POST /classes/{class_id}/remind`.
 ![Sequence Diagram for remind endpoint](files/remind_sequence_diagram.png)
+
+**Flow summary:**
+1. An authenticated Trainer or Admin sends a POST request with their JWT.
+2. `ClassReminder.post()` validates the JWT and confirms the role is `"trainer"` or `"admin"`.
+3. The class is fetched from MongoDB via `FitnessClassResource`.
+4. The system checks that the class has not yet started and that there is at least one participant.
+5. An `EmailService` instance is created and `send_class_reminders()` is called.
+6. `EmailService` iterates through each participant and calls `send_reminder()` for each one.
+7. Each `send_reminder()` call invokes the AWS SES client. Failures for individual participants are caught and skipped.
+8. The total count of successfully sent emails is returned to the client.
 
 ---
 
 ## 2 - Design Principle Violations
 
+The following violations were identified through manual code review. They cover four distinct principles: Single Responsibility, Dependency Inversion, Open/Closed, Modularity, and Encapsulation.
+
 ### Violation 1: Single Responsibility Principle (SRP)
-**File:** `app/apis/classes.py` 
-**Lines:** 159–207 
+**File:** `app/apis/classes.py`
+**Lines:** 159–207
 **Method:** `BookClass.post()`
 
 **Principle:** A class or method should have only one reason to change.
@@ -125,7 +155,7 @@ This is not modular. The same logic (safely extract a string field and strip whi
 ### Violation 5: Encapsulation
 
 **File:** `app/db/fitness_classes.py` 
-**Lines:** 45–56 
+**Lines:** 45–56
 **Method:** `FitnessClassResource.book_class()`
 
 **Principle:** Internal state and implementation details should not be exposed through a class's public interface.
@@ -195,18 +225,25 @@ This is a textbook case of duplicated code. Any logic change to how a field is e
 
 ---
 
-
 ## 4 – Design Reflection on New Features
-    
-**New Features Being Considered:**
- >TBD
+### Feature 6: Create Recurring Class
 
+Feature 6 requires trainers to create a class once and have it automatically repeat (e.g., daily or weekly). The current design does not support this, and our analysis reveals several ways the existing system will hinder its implementation.
 
-**How Current Design Helps:**
->TBD
+The `create_fitness_class()` method in `fitness_classes.py` (lines 33–40) creates exactly one class document per call. There is no concept of a recurrence pattern in the data model. To support recurring classes, we would need to either generate multiple individual class documents at creation time or introduce a new `RecurringClass` document type and a mechanism to instantiate future occurrences. Neither approach is supported by the current schema.
 
-**How Current Design Hinders:**
->TBD
+Furthermore, the `FitnessClassList.post()` method already suffers from the modularity violation identified in Task 2 — it is bloated with inline validation. Adding recurrence parameters (e.g., frequency, end date) to an already dense method will make it significantly harder to read and maintain.
 
-**Recommendations:**
->TBD
+The Single Responsibility violation in `FitnessClassList.post()` is the most directly harmful here: the method already mixes validation, authorization, date parsing, and class creation. Adding a branching code path for recurrence generation will compound this problem.
+
+### Feature 7: Configure Notifications
+
+Feature 7 requires registered users to choose how they receive reminders (email, Telegram, SMS, etc.). This is where the current design is most significantly lacking.
+
+The most critical issue is the absence of a `NotificationService` abstraction (Violation 3 — OCP). Currently, `EmailService` is the only notification mechanism and there is no shared interface. Adding SMS or Telegram support means creating new classes with no common contract, making it difficult to treat them interchangeably.
+
+The DIP violation in `ClassReminder.post()` (Violation 2) compounds this: the endpoint directly instantiates `EmailService`, so even if we create new notification service classes, the endpoint will not know how to select between them without modification.
+
+There is also no field in the `User` model to store notification preferences. The participants stored in a fitness class only contain `name`, `email`, and `phone`. We would need to add a `notification_channels` field (or similar) to the user schema and propagate it into the participant record at booking time.
+
+In summary, Feature 7 is the more disruptive of the two. The current design was built around a single, hardcoded notification channel and will require structural changes specifically, introducing a notification abstraction layer and updating the user and participant data models before multiple notification channels can be added in a clean and extensible way.
