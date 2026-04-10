@@ -133,6 +133,8 @@ export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
  ```
 3. This outputs `classes_FitnessApp.png` in the current directory. Note that the output may need manual refinement for readability.
 
+or use `PySequenceReverse Sequence Diagram Builder for Python` extension on VS Code.
+
 ### Generating UML Diagrams with Planttext
 
 The Planttext diagram files for the class diagram and sequence diagrams are located in `reports/files/` that we generated and rendered the diagrams in [https://www.planttext.com/](https://www.planttext.com/)

@@ -6,7 +6,9 @@ This report documents the current design of the Fitness Class Management and Boo
 ## Summary
 
 **Tools Used:**
-- *No automated tools were used.*
+-`pyreverse` (from the Pylint package) was used to generate an initial class diagram from the source code, which was then refined manually for clarity and accuracy.
+-Planttext.com was used to produce all final UML diagrams included in this report. The diagrams files are located in `reports/files`.
+-No automated code smell detection tools (e.g., SonarQube) were used. All design violations and code smells were identified through manual code review.
 
 **Approach:**
 - *We conducted manual code review in a zoom call with all of us reviewing different files*
