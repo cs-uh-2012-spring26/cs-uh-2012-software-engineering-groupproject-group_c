@@ -20,8 +20,11 @@
 ---
 
 ## 1 - Design Diagrams
-### ![Sequence Diagram for book class endpoint](book_class_sequence_diragram.png)
-### ![Sequence Diagram for remind endpoint](remind_sequence_diagram.png)
+### Sequence Diagram for book class endpoint
+![Sequence Diagram for book class endpoint](book_class_sequence_diagram.png)
+
+### Sequence Diagram for remind endpoint
+![Sequence Diagram for remind endpoint](remind_sequence_diagram.png)
 
 ---
 
