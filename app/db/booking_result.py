@@ -1,6 +1,5 @@
 from enum import Enum
 
-
 class BookingResult(str, Enum):
    OK = "ok"
    NOT_FOUND = "not_found"
