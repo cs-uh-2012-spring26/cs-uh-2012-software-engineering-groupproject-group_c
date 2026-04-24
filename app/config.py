@@ -16,7 +16,9 @@ def get_required_environ(name: str) -> str:
         raise ValueError(f"Required environment variable {name} cannot be empty")
     return value
 
-
+def get_optional_environ(name: str, default: str = "") -> str:
+    load_dotenv()
+    return environ.get(name, default)
 class Config(object):
     MONGO_URI = get_required_environ("MONGO_URI")
     DB_NAME = get_required_environ("DB_NAME")
@@ -24,5 +26,6 @@ class Config(object):
     DEBUG = get_required_environ("DEBUG").lower() == "true"
     JWT_SECRET_KEY = get_required_environ("JWT_SECRET_KEY")
     AWS_SES_REGION = get_required_environ("AWS_SES_REGION")
+    TELEGRAM_BOT_TOKEN = get_optional_environ("TELEGRAM_BOT_TOKEN")
 
 
