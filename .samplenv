@@ -19,3 +19,6 @@ MOCK_DB="false"
 DEBUG="true"
 SES_SENDER_EMAIL="your email here"
 AWS_SES_REGION="region here"
+
+#Telegram Bot (Optional)
+TELEGRAM_BOT_TOKEN=""
