@@ -14,8 +14,9 @@ def test_send_reminder_calls_ses():
     assert "Yoga" in call_kwargs["Message"]["Subject"]["Data"]
     assert "Gym" in call_kwargs["Message"]["Body"]["Text"]["Data"]
 
-
 def test_send_reminder_subject_contains_date():
+    mock_client = MagicMock()
+    service = EmailService(ses_client=mock_client, sender="gym@example.com")
     service.send_reminder("user@test.com", "Pilates", "2026-05-10", "09:00", "Studio")
     call_kwargs = mock_client.send_email.call_args[1]
     assert "2026-05-10" in call_kwargs["Message"]["Subject"]["Data"]
