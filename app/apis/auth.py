@@ -1,9 +1,8 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
-from flask_jwt_extended import create_access_token, create_refresh_token
-from app.db.users import UserResource
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from app.db.users import UserResource, VALID_CHANNELS
 from http import HTTPStatus
-import json
 
 
 api = Namespace("auth", description="Authentication operations")
@@ -18,6 +17,17 @@ REGISTER_MODEL = api.model("Register", {
         description="User's role: member, trainer, or admin. Defaults to member.",
         enum=["member", "trainer", "admin"],
         example="member",
+    ),
+    "notification_channels": fields.List(
+       fields.String,
+       required=False,
+       description="Notification channels: email, telegram. Defaults to [email].",
+       example=["email"],
+    ),
+    "telegram_chat_id": fields.String(
+        required=False,
+        description="Telegram chat ID for Telegram notifications.",
+        example="123456789",
     ),
 })
 
@@ -39,6 +49,21 @@ TOKEN_RESPONSE_MODEL = api.model("TokenResponse", {
     })),
 })
 
+PREFERENCES_MODEL = api.model("Preferences", {
+   "notification_channels": fields.List(
+       fields.String,
+       required=True,
+       description="List of notification channels (email, telegram)",
+       example=["email", "telegram"],
+   ),
+   "telegram_chat_id": fields.String(
+       required=False,
+       description="Telegram chat ID (required when telegram is in channels)",
+       example="123456789",
+   ),
+})
+
+
 @api.route("/register")
 class Register(Resource):
     @api.expect(REGISTER_MODEL)
@@ -56,12 +81,17 @@ class Register(Resource):
         phone = data.get("phone", "").strip()
         password = data.get("password") or ""
         role = (data.get("role") or "member").lower()
+        notification_channels = data.get("notification_channels") or ["email"]
+        telegram_chat_id = data.get("telegram_chat_id") or ""
 
         if not all([name, email,phone, password]):
             return {"message": "name,email, phone,and password are all required"}, HTTPStatus.BAD_REQUEST
 
         if role not in ("member", "trainer","admin"):
             return {"message": "role must be one of: member, trainer, admin"}, HTTPStatus.BAD_REQUEST
+        
+        if not isinstance(notification_channels, list) or not all(c in VALID_CHANNELS for c in notification_channels):
+           return {"message": "notification_channels must be a list containing: email, telegram"}, HTTPStatus.BAD_REQUEST
 
         user_resource = UserResource()
         try:
@@ -71,6 +101,8 @@ class Register(Resource):
                 phone=phone,
                 password=password,
                 role=role,
+                notification_channels=notification_channels,
+                telegram_chat_id=telegram_chat_id,
             )
             return {"message": "User registered successfully","user_id": user_id}, HTTPStatus.CREATED
         except ValueError as e:
@@ -117,3 +149,35 @@ class Login(Resource):
                 "role": user.get("role"),
             },
         }, HTTPStatus.OK
+
+@api.route("/preferences")
+class Preferences(Resource):
+   @api.expect(PREFERENCES_MODEL)
+   @api.doc(description="Update notification preferences for the logged-in user.", security="Bearer Auth")
+   @api.response(HTTPStatus.OK, "Preferences updated")
+   @api.response(HTTPStatus.BAD_REQUEST, "Validation error")
+   @api.response(HTTPStatus.UNAUTHORIZED, "Not authenticated")
+   @jwt_required()
+   def put(self):
+       """Update notification channels and Telegram chat ID (JWT required)"""
+       data = request.json
+       if not data:
+           return {"message": "Request body is required"}, HTTPStatus.BAD_REQUEST
+
+
+       notification_channels = data.get("notification_channels")
+       telegram_chat_id = data.get("telegram_chat_id") or ""
+
+
+       if not isinstance(notification_channels, list) or not notification_channels:
+           return {"message": "notification_channels must be a non-empty list"}, HTTPStatus.BAD_REQUEST
+
+
+       if not all(c in VALID_CHANNELS for c in notification_channels):
+           return {"message": "notification_channels must only contain: email, telegram"}, HTTPStatus.BAD_REQUEST
+
+
+       email = get_jwt_identity()
+       user_resource = UserResource()
+       user_resource.update_preferences(email, notification_channels, telegram_chat_id)
+       return {"message": "Preferences updated successfully"}, HTTPStatus.OK
