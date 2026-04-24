@@ -18,6 +18,7 @@ jobs:
       JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
       SES_SENDER_EMAIL: ${{ secrets.SES_SENDER_EMAIL }}
       AWS_SES_REGION: ${{ secrets.AWS_SES_REGION }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
