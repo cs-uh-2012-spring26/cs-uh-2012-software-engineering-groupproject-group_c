@@ -1,6 +1,9 @@
 from app.db.utils import serialize_item, serialize_items
 from app.db import DB
+from app.db.booking_result import BookingResult
 from bson import ObjectId
+from datetime import datetime, timedelta
+import uuid
 
 # Fitness Class Collection Name
 FITNESS_CLASS = "fitness_class"
@@ -17,6 +20,12 @@ CAPACITY = "capacity"
 AVAILABLE_SLOTS = "available_slots"
 PARTICIPANTS = "participants"
 CREATED_BY = "created_by"
+RECURRENCE_GROUP_ID = "recurrence_group_id"
+
+RECURRENCE_DELTAS = {
+   "daily": timedelta(days=1),
+   "weekly": timedelta(weeks=1),
+}
 
 class FitnessClassResource:
    def __init__(self):
@@ -31,41 +40,60 @@ class FitnessClassResource:
       return serialize_items(classes_without_participants)
 
    def create_fitness_class(self, name: str, description: str, date: str, start_time: str, end_time: str, location: str, trainer: str,
-       capacity: int, created_by: str):
+       capacity: int, created_by: str, recurrence_group_id: str = None):
 
        fitness_class = {NAME: name, DESCRIPTION: description, DATE: date, START_TIME: start_time, END_TIME: end_time, LOCATION: location,
        TRAINER: trainer, CAPACITY: capacity, AVAILABLE_SLOTS: capacity, PARTICIPANTS: [], CREATED_BY: created_by}
 
+       if recurrence_group_id:
+           fitness_class[RECURRENCE_GROUP_ID] = recurrence_group_id
        result = self.collection.insert_one(fitness_class)
        return str(result.inserted_id)
 
-   def book_class(self, class_id: str, participant: dict, is_trainer: bool = False):
+   def create_recurring_classes(self, name: str, description: str, date: str, start_time: str, end_time: str, location: str,
+       trainer: str, capacity: int, created_by: str, recurrence: str, count: int) -> list:
+       delta = RECURRENCE_DELTAS.get(recurrence, timedelta(days=1))
+       group_id = str(uuid.uuid4())
+       base_date = datetime.strptime(date, "%Y-%m-%d")
+       created_ids = []
+       for i in range(count):
+           class_date = (base_date + delta * i).strftime("%Y-%m-%d")
+           class_id = self.create_fitness_class(
+               name, description, class_date, start_time, end_time,
+               location, trainer, capacity, created_by,
+               recurrence_group_id=group_id,
+           )
+           created_ids.append(class_id)
+       return created_ids
+
+   def book_class(self, class_id: str, participant: dict) -> BookingResult:
        fitness_class = self.get_fitness_class_by_id(class_id)
        if fitness_class is None:
-           return "not_found"
+           return BookingResult.NOT_FOUND
 
-       participants = fitness_class.get(PARTICIPANTS, [])
        email = participant.get("email", "")
-       for p in participants:
-           if isinstance(p, dict) and p.get("email") == email:
-              return "already_booked"
-           if isinstance(p, str) and p == email:
-              return "already_booked"
+       for p in fitness_class.get(PARTICIPANTS, []):
+           existing_email = p.get("email", "") if isinstance(p, dict) else p
+           if existing_email == email:
+               return BookingResult.ALREADY_BOOKED
 
-       if not is_trainer and fitness_class.get(AVAILABLE_SLOTS, 0) <= 0:
-          return "class_full"
-       
+       if fitness_class.get(AVAILABLE_SLOTS, 0) <= 0:
+          return BookingResult.CLASS_FULL
+
        try:
            oid = ObjectId(class_id)
        except Exception:
-           return "not_found"
+           return BookingResult.NOT_FOUND
 
-       update: dict = {"$push": {PARTICIPANTS: participant}}
-       if not is_trainer:
-           update["$inc"] = {AVAILABLE_SLOTS: -1}
+       self.collection.update_one({"_id": oid},
+           {"$push": {PARTICIPANTS: participant}, "$inc": {AVAILABLE_SLOTS: -1}})
+       return BookingResult.OK
 
-       self.collection.update_one({"_id": oid}, update)
-       return "ok"
+   def has_participants(self, class_id: str) -> bool:
+       fitness_class = self.get_fitness_class_by_id(class_id)
+       if fitness_class is None:
+           return False
+       return len(fitness_class.get(PARTICIPANTS, [])) > 0
 
    def get_participants(self, class_id: str):
        fitness_class = self.get_fitness_class_by_id(class_id)
@@ -81,7 +109,7 @@ class FitnessClassResource:
        fitness_class = self.collection.find_one({"_id": oid})
        return serialize_item(fitness_class)
 
-   def add_multiple_fitness_classes(self, fitness_classes: list[dict]):
+   def add_multiple_fitness_classes(self, fitness_classes: list):
        if not fitness_classes:
            return
        self.collection.insert_many(fitness_classes)
