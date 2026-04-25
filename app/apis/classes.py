@@ -7,6 +7,7 @@ from app.db.fitness_classes import (
    LOCATION, TRAINER, CAPACITY, AVAILABLE_SLOTS, PARTICIPANTS, CREATED_BY,
 )
 from app.db.users import UserResource
+from app.db.booking_result import BookingResult
 from http import HTTPStatus
 from flask import request
 from datetime import datetime, timedelta
@@ -28,6 +29,9 @@ _EXAMPLE_CLASS = {
    CREATED_BY: "admin@example.com",
 }
 
+VALID_RECURRENCES = {"daily", "weekly"}
+MAX_RECURRENCE_COUNT = 10
+BOOKING_DEADLINE_MINUTES = 30
 
 CLASS_CREATE_FLDS = api.model(
     "NewClassEntry",
@@ -40,6 +44,17 @@ CLASS_CREATE_FLDS = api.model(
         LOCATION: fields.String(required=True, example=_EXAMPLE_CLASS[LOCATION]),
         TRAINER: fields.String(required=True, example=_EXAMPLE_CLASS[TRAINER]),
         CAPACITY: fields.Integer(required=True, example=_EXAMPLE_CLASS[CAPACITY]),
+        "recurrence": fields.String(
+            required=False,
+            description="Recurrence type: daily or weekly",
+            enum=["daily", "weekly"],
+            example="weekly",
+        ),
+        "recurrence_count": fields.Integer(
+            required=False,
+            description=f"Number of recurring instances (2–{MAX_RECURRENCE_COUNT})",
+            example=4,
+        ),
     },
 )
 
@@ -76,6 +91,43 @@ def _parse_class_datetime(fitness_class: dict) -> datetime | None:
        return None
 
 
+def _fetch_class_or_404(class_id: str):
+    fitness_class = FitnessClassResource().get_fitness_class_by_id(class_id)
+    if fitness_class is None:
+        return None, ({MSG: "Class not found"}, HTTPStatus.NOT_FOUND)
+    return fitness_class, None
+
+
+def _validate_class_fields(data: dict):
+    name = data.get(NAME, "").strip() if isinstance(data.get(NAME), str) else ""
+    description = data.get(DESCRIPTION, "").strip() if isinstance(data.get(DESCRIPTION), str) else ""
+    date = data.get(DATE, "").strip() if isinstance(data.get(DATE), str) else ""
+    start_time = data.get(START_TIME, "").strip() if isinstance(data.get(START_TIME), str) else ""
+    end_time = data.get(END_TIME, "").strip() if isinstance(data.get(END_TIME), str) else ""
+    location = data.get(LOCATION, "").strip() if isinstance(data.get(LOCATION), str) else ""
+    trainer = data.get(TRAINER, "").strip() if isinstance(data.get(TRAINER), str) else ""
+    capacity = data.get(CAPACITY)
+
+    if not all([name, description, date, start_time, end_time, location, trainer]):
+        return None, ({MSG: "All fields are required: name, description, date, start_time, end_time, location, trainer, capacity"}, HTTPStatus.BAD_REQUEST)
+
+    if not isinstance(capacity, int) or capacity <= 0:
+        return None, ({MSG: "Capacity must be a positive integer"}, HTTPStatus.BAD_REQUEST)
+
+    try:
+        class_start = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
+    except ValueError:
+        return None, ({MSG: "Invalid date or start_time format. Use YYYY-MM-DD and HH:MM"}, HTTPStatus.BAD_REQUEST)
+
+    if class_start < datetime.now():
+        return None, ({MSG: "Cannot create a class in the past"}, HTTPStatus.BAD_REQUEST)
+
+    return {
+        "name": name, "description": description, "date": date,
+        "start_time": start_time, "end_time": end_time,
+        "location": location, "trainer": trainer, "capacity": capacity,
+    }, None
+
 
 @api.route("/")
 class FitnessClassList(Resource):
@@ -86,8 +138,7 @@ class FitnessClassList(Resource):
 
     def get(self):
          """List all upcoming fitness classes (public)"""
-         fitness_class_resource = FitnessClassResource()
-         class_list = fitness_class_resource.get_fitness_classes()
+         class_list = FitnessClassResource().get_fitness_classes()
          return {MSG: class_list}, HTTPStatus.OK
 
     @api.expect(CLASS_CREATE_FLDS)
@@ -104,45 +155,39 @@ class FitnessClassList(Resource):
        if claims.get("role") != "admin":
            return {MSG: "Admin role required"}, HTTPStatus.FORBIDDEN
 
-
        data = request.json
        if not isinstance(data, dict):
            return {MSG: "Request body is required"}, HTTPStatus.BAD_REQUEST
 
+       fields, error = _validate_class_fields(data)
+       if error:
+           return error
 
-       name = data.get(NAME, "").strip() if isinstance(data.get(NAME), str) else ""
-       description = data.get(DESCRIPTION, "").strip() if isinstance(data.get(DESCRIPTION), str) else ""
-       date = data.get(DATE, "").strip() if isinstance(data.get(DATE), str) else ""
-       start_time = data.get(START_TIME, "").strip() if isinstance(data.get(START_TIME), str) else ""
-       end_time = data.get(END_TIME, "").strip() if isinstance(data.get(END_TIME), str) else ""
-       location = data.get(LOCATION, "").strip() if isinstance(data.get(LOCATION), str) else ""
-       trainer = data.get(TRAINER, "").strip() if isinstance(data.get(TRAINER), str) else ""
-       capacity = data.get(CAPACITY)
+       recurrence = data.get("recurrence")
+       recurrence_count = data.get("recurrence_count")
 
-
-       if not all([name, description, date, start_time, end_time, location, trainer]):
-           return {MSG: "All fields are required: name, description, date, start_time, end_time, location, trainer, capacity"}, HTTPStatus.BAD_REQUEST
-
-
-       if not isinstance(capacity, int) or capacity <= 0:
-           return {MSG: "Capacity must be a positive integer"}, HTTPStatus.BAD_REQUEST
-
-
-       try:
-           class_start = datetime.strptime(f"{date} {start_time}", "%Y-%m-%d %H:%M")
-       except ValueError:
-           return {MSG: "Invalid date or start_time format. Use YYYY-MM-DD and HH:MM"}, HTTPStatus.BAD_REQUEST
-
-
-       if class_start < datetime.now():
-           return {MSG: "Cannot create a class in the past"}, HTTPStatus.BAD_REQUEST
-
+       if recurrence is not None:
+           if recurrence not in VALID_RECURRENCES:
+               return {MSG: "recurrence must be 'daily' or 'weekly'"}, HTTPStatus.BAD_REQUEST
+           if not isinstance(recurrence_count, int) or not (2 <= recurrence_count <= MAX_RECURRENCE_COUNT):
+               return {MSG: f"recurrence_count must be an integer between 2 and {MAX_RECURRENCE_COUNT}"}, HTTPStatus.BAD_REQUEST
 
        created_by = get_jwt_identity()
-       fitness_class_resource = FitnessClassResource()
-       class_id = fitness_class_resource.create_fitness_class(
-           name, description, date, start_time, end_time,
-           location, trainer, capacity, created_by,
+       fc_resource = FitnessClassResource()
+
+       if recurrence:
+           class_ids = fc_resource.create_recurring_classes(
+               fields["name"], fields["description"], fields["date"],
+               fields["start_time"], fields["end_time"], fields["location"],
+               fields["trainer"], fields["capacity"], created_by,
+               recurrence=recurrence, count=recurrence_count,
+           )
+           return {MSG: f"{len(class_ids)} recurring classes created", "class_ids": class_ids}, HTTPStatus.CREATED
+
+       class_id = fc_resource.create_fitness_class(
+           fields["name"], fields["description"], fields["date"],
+           fields["start_time"], fields["end_time"], fields["location"],
+           fields["trainer"], fields["capacity"], created_by,
        )
        return {MSG: f"Fitness class created with id: {class_id}"}, HTTPStatus.CREATED
 
@@ -159,25 +204,18 @@ class BookClass(Resource):
    def post(self, class_id):
        """Book a fitness class (member, Bearer token required)"""
        claims = get_jwt()
-       role = claims.get("role")
-       if role != "member":
+       if claims.get("role") != "member":
            return {MSG: "Member role required to book a class"}, HTTPStatus.FORBIDDEN
 
-
-       fitness_class_resource = FitnessClassResource()
-       fitness_class = fitness_class_resource.get_fitness_class_by_id(class_id)
-
-
-       if fitness_class is None:
-           return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
-
+       fitness_class, error = _fetch_class_or_404(class_id)
+       if error:
+           return error
 
        class_start = _parse_class_datetime(fitness_class)
        if class_start is not None:
-           booking_deadline = class_start + timedelta(minutes=30)
+           booking_deadline = class_start + timedelta(minutes=BOOKING_DEADLINE_MINUTES)
            if datetime.now() > booking_deadline:
                return {MSG: "Booking deadline has passed (30 minutes after class start)"}, HTTPStatus.BAD_REQUEST
-
 
        user_email = claims.get("email", "")
        user_resource = UserResource()
@@ -185,27 +223,23 @@ class BookClass(Resource):
        if user is None:
            return {MSG: "User not found"}, HTTPStatus.NOT_FOUND
 
-
        participant = {
            "name": user.get("name", ""),
            "email": user.get("email", ""),
            "phone": user.get("phone", ""),
        }
 
+       result = FitnessClassResource().book_class(class_id, participant)
 
-       result = fitness_class_resource.book_class(class_id, participant)
-
-
-       if result == "not_found":
+       if result == BookingResult.NOT_FOUND:
            return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
-       if result == "already_booked":
+       if result == BookingResult.ALREADY_BOOKED:
            return {MSG: "You have already booked this class"}, HTTPStatus.BAD_REQUEST
-       if result == "class_full":
+       if result == BookingResult.CLASS_FULL:
            return {MSG: "Class is full, no available spots"}, HTTPStatus.BAD_REQUEST
 
-
        return {MSG: "Class booked successfully"}, HTTPStatus.OK
-   
+
 @api.route("/<string:class_id>/participants")
 @api.param("class_id", "The fitness class identifier")
 class ClassParticipants(Resource):
@@ -235,46 +269,62 @@ class ClassParticipants(Resource):
 @api.route("/<string:class_id>/remind")
 @api.param("class_id", "The fitness class identifier")
 class ClassReminder(Resource):
-  @api.doc(description="Send reminder emails to class participants. Trainer/Admin only.", security="Bearer Auth")
+  @api.doc(description="Send reminders to class participants via their chosen channels. Trainer/Admin only.", security="Bearer Auth")
   @api.response(HTTPStatus.OK, "Reminders sent")
   @api.response(HTTPStatus.NOT_FOUND, "Class not found")
   @api.response(HTTPStatus.BAD_REQUEST, "No participants or class already started")
   @api.response(HTTPStatus.FORBIDDEN, "Trainer or Admin role required")
   @jwt_required()
   def post(self, class_id):
-      """Send reminder emails to all participants (trainer/admin, Bearer token required)"""
+      """Send reminders to all participants via their chosen channels (trainer/admin, Bearer token required)"""
       claims = get_jwt()
-      role = claims.get("role")
-      if role not in ("trainer", "admin"):
+      if claims.get("role") not in ("trainer", "admin"):
           return {MSG: "Trainer or Admin role required"}, HTTPStatus.FORBIDDEN
 
-
-      fitness_class_resource = FitnessClassResource()
-      fitness_class = fitness_class_resource.get_fitness_class_by_id(class_id)
-
-
-      if fitness_class is None:
-          return {MSG: "Class not found"}, HTTPStatus.NOT_FOUND
-
+      fitness_class, error = _fetch_class_or_404(class_id)
+      if error:
+          return error
 
       class_start = _parse_class_datetime(fitness_class)
       if class_start is not None and datetime.now() > class_start:
           return {MSG: "Cannot send reminders for a class that has already started"}, HTTPStatus.BAD_REQUEST
 
-
-      participants = fitness_class.get(PARTICIPANTS, [])
-      if not participants:
+      fc_resource = FitnessClassResource()
+      if not fc_resource.has_participants(class_id):
           return {MSG: "No participants to remind"}, HTTPStatus.BAD_REQUEST
 
-
       from app.services.email_service import EmailService
-      email_service = EmailService()
-      try:
-          sent_count = email_service.send_class_reminders(fitness_class)
-      except Exception as e:
-          return {MSG: f"Failed to send reminders: {str(e)}"}, HTTPStatus.INTERNAL_SERVER_ERROR
+      from app.services.notifier import EmailNotifier, TelegramNotifier
+      from app.config import Config
 
+      notifier_registry = {
+          "email": EmailNotifier(EmailService()),
+          "telegram": TelegramNotifier(Config.TELEGRAM_BOT_TOKEN),
+      }
 
-      return {MSG: f"Reminders sent to {sent_count} participants"}, HTTPStatus.OK
+      user_resource = UserResource()
+      participants = fitness_class.get(PARTICIPANTS, [])
+      participants_reached = 0
 
+      for participant in participants:
+          email = participant.get("email", "") if isinstance(participant, dict) else participant
+          user = user_resource.get_user_by_email(email)
+          channels = user.get("notification_channels", ["email"]) if user else ["email"]
+          recipient = {
+              **(participant if isinstance(participant, dict) else {"email": participant}),
+              "telegram_chat_id": user.get("telegram_chat_id", "") if user else "",
+          }
+          participant_notified = False
+          for channel in channels:
+              notifier = notifier_registry.get(channel)
+              if notifier is None:
+                  continue
+              try:
+                  notifier.send_reminder(recipient, fitness_class)
+                  participant_notified = True
+              except Exception:
+                  continue
+          if participant_notified:
+              participants_reached += 1
 
+      return {MSG: f"Reminders sent to {participants_reached} participants"}, HTTPStatus.OK

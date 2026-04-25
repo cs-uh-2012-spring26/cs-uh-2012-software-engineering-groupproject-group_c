@@ -57,11 +57,20 @@ def mock_email_service():
     mock_cls = MagicMock()
     mock_instance = MagicMock()
     mock_cls.return_value = mock_instance
-    mock_instance.send_class_reminders.return_value = 1
+    mock_instance.send_reminder.return_value = None
 
     email_module.EmailService = mock_cls
     yield mock_instance
     email_module.EmailService = original_cls
+
+
+@pytest.fixture(autouse=True)
+def mock_telegram_requests():
+    import app.services.notifier as notifier_module
+    original_post = notifier_module.requests.post
+    notifier_module.requests.post = MagicMock(return_value=MagicMock(status_code=200))
+    yield notifier_module.requests.post
+    notifier_module.requests.post = original_post
 
 
 def _get_token(client, name, email, phone, password, role="member"):

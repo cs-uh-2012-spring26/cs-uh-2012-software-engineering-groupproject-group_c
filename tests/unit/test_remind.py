@@ -19,7 +19,7 @@ def test_remind_success_trainer(client, admin_token, member_token,
                        headers=auth_header(trainer_token))
     assert resp.status_code == HTTPStatus.OK
     assert "1 participants" in resp.get_json()["message"]
-    mock_email_service.send_class_reminders.assert_called_once()
+    mock_email_service.send_reminder.assert_called_once()
 
 def test_remind_success_admin(client, admin_token, member_token,
                               mock_email_service):
@@ -72,10 +72,45 @@ def test_remind_class_already_started(client, trainer_token, mock_email_service)
 
 def test_remind_email_service_failure(client, admin_token, member_token,
                                       mock_email_service):
-    mock_email_service.send_class_reminders.side_effect = Exception("SES down")
+    mock_email_service.send_reminder.side_effect = Exception("SES down")
     class_id = _create_class_with_booking(client, admin_token, member_token)
 
     resp = client.post(f"/classes/{class_id}/remind",
                        headers=auth_header(admin_token))
-    assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
-    assert "Failed to send" in resp.get_json()["message"]
+    assert resp.status_code == HTTPStatus.OK
+    assert "0 participants" in resp.get_json()["message"]
+
+
+def test_remind_telegram_channel(client, admin_token, member_token,
+                                 trainer_token, mock_email_service,
+                                 mock_telegram_requests):
+    client.put("/auth/preferences", json={
+        "notification_channels": ["telegram"],
+        "telegram_chat_id": "123456789",
+    }, headers=auth_header(member_token))
+
+    class_id = _create_class_with_booking(client, admin_token, member_token)
+
+    resp = client.post(f"/classes/{class_id}/remind",
+                       headers=auth_header(trainer_token))
+    assert resp.status_code == HTTPStatus.OK
+    assert "1 participants" in resp.get_json()["message"]
+    mock_telegram_requests.assert_called_once()
+
+
+def test_remind_both_channels(client, admin_token, member_token,
+                              trainer_token, mock_email_service,
+                              mock_telegram_requests):
+    client.put("/auth/preferences", json={
+        "notification_channels": ["email", "telegram"],
+        "telegram_chat_id": "987654321",
+    }, headers=auth_header(member_token))
+
+    class_id = _create_class_with_booking(client, admin_token, member_token)
+
+    resp = client.post(f"/classes/{class_id}/remind",
+                       headers=auth_header(trainer_token))
+    assert resp.status_code == HTTPStatus.OK
+    assert "1 participants" in resp.get_json()["message"]
+    mock_email_service.send_reminder.assert_called_once()
+    mock_telegram_requests.assert_called_once()
