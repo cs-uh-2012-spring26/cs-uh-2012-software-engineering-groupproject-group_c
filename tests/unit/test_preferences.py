@@ -52,3 +52,25 @@ def test_update_preferences_empty_body(client, member_token):
                      content_type="application/json",
                      headers=auth_header(member_token))
    assert resp.status_code in (HTTPStatus.BAD_REQUEST, HTTPStatus.INTERNAL_SERVER_ERROR)
+
+def test_register_with_telegram_channel(client):
+   resp = client.post("/auth/register", json={
+       "name": "Telegram User",
+       "email": "tguser@test.com",
+       "phone": "+999",
+       "password": "pass123",
+       "notification_channels": ["telegram"],
+       "telegram_chat_id": "111222333",
+   })
+   assert resp.status_code == HTTPStatus.CREATED
+
+def test_register_with_invalid_channel(client):
+   resp = client.post("/auth/register", json={
+       "name": "Bad User",
+       "email": "bad@test.com",
+       "phone": "+999",
+       "password": "pass123",
+       "notification_channels": ["whatsapp"],
+   })
+   assert resp.status_code == HTTPStatus.BAD_REQUEST
+
