@@ -1,0 +1,13 @@
+## Final Reflections 
+
+### Michael
+I learned how to integrate Telegram into our project — creating a bot, making it send reminders, and things like using BotFather to work with user IDs. I also learned how to integrate Amazon SES using boto for emails. These are just a few examples, but the bigger point is I picked up a lot of small practical skills I never thought were worth learning, like GitHub CI, working with branches, and handling conflicts. As someone leaning more toward AI/ML than traditional SWE, I genuinely hadn't spent time on these things before, and now I'm glad I have. And I don't think I am the only one person like that. Also, one other thing I wanted to mention was I really enjoyed just working on the backend, where I am more productive and relaxed, with Swagger handling the frontend. This was a good design choice for this project.
+
+### Ryan
+This project made me understand why it's called software engineering and not just coding. I've worked on solo projects of similar scale before, but this time I actually had to explain my ideas, my implementation plans, my file structures, and my ridiculous commit messages to other people. And that showed me why all the tedious and repetitive things exist. The coding isn't the major part of SWE. But it is also not surprising at all that the coding was the most fun part too. Also, seeing the purple symbol when a PR gets successfully merged never gets old.
+
+### Nelson
+We went into the first client meeting having only read the brief, and it took about two minutes to realize how wrong that approach was. A proper 15-minute interview generated more useful information than we could have assumed on our own. I now completely understand why requirement engineering is a thing. Of course, the interview itself was actually the fun part. It feels really natural to talk to a person than get handed a list of requirements. What was difficult was organizing all those small scattered pieces of information afterward into something that a person who wasn't there, or myself a week later, could actually make sense of.
+
+### Paulo
+Reading the sprint 3B instructions, I immediately thought "we could have totally predicted this." Making the reminder system extensible to support both email and Telegram would have saved us more than half the time we spent on that sprint. Same goes for the code smells and design patterns we had to fix, we could have seen all of them coming. It's a class project so I'm not too upset, but stopping to think before jumping into the code feels like a genuinely important habit to build as a future Software Engineer.
