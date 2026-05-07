@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      DB_NAME: ${DB_NAME}
+      MOCK_DB: ${MOCK_DB:-false}
+      DEBUG: ${DEBUG:-false}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      AWS_SES_REGION: ${AWS_SES_REGION}
+      SES_SENDER_EMAIL: ${SES_SENDER_EMAIL:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+    restart: unless-stopped
