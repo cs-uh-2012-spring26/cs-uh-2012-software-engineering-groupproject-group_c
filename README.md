@@ -128,6 +128,32 @@ export AWS_SECRET_ACCESS_KEY="your-secret-access-key"
 ```
 
 > **Note:** In unit tests, the email service is mocked and no actual emails are sent. You do not need AWS credentials to run the test suite.
+
+
+## Telegram Notification Feature
+
+The API supports sending Telegram notifications to users. This requires a Telegram bot (for the server) and the personal chat ID of the user.
+
+### Creating a Bot with BotFather
+
+1. Open Telegram and search for **@BotFather**
+2. Start a chat and send `/start` followed by `/newbot`
+3. Follow the instructions to choose a name and username for your bot
+4. BotFather will give you a **bot token**. Save this for your `.env` file
+
+### Getting Your Telegram Chat ID
+
+1. Open Telegram and search for **@Getmyid_Work_Bot**
+2. Start a chat and send `/start`
+3. The bot will reply with your **chat ID**. The user should use this when registering as a member.
+
+### Environment Variables for Telegram
+Add the following to your `.env` file:
+
+```env
+TELEGRAM_BOT_TOKEN="your-bot-token-from-botfather"
+```
+
 ## Design Analysis Tools (Sprint 3A)
 
 
