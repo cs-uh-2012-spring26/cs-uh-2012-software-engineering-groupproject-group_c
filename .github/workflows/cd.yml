@@ -1,0 +1,31 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows:
+      - CI      
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean VM
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          port: ${{ secrets.VM_PORT }}
+          script: |
+            cd /opt/fitness-api
+            docker pull ${{ secrets.DOCKER_USERNAME }}/fitness-api:latest
+            docker compose down
+            docker compose up -d
+            docker system prune -f
