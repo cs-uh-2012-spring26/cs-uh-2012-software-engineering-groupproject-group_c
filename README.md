@@ -11,6 +11,7 @@ The API is live at:
 ```
 http://139.59.24.188:8000/
 ```
+[View the API](http://139.59.24.188:8000/)
 
 Deployed automatically via GitHub Actions on every
 push to `main` that passes CI.
