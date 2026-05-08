@@ -142,3 +142,38 @@ The Planttext diagram files for the class diagram and sequence diagrams are loca
 ## Best Practices
 
 See [/docs/BestPractices.md](/docs/BestPractices.md) for advice regarding branch naming and other useful tips.
+
+## Running with Docker
+
+### Prerequisites
+- Docker and Docker Compose installed
+
+### Setup
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/cs-uh-2012-spring26/cs-uh-2012-software-engineering-groupproject-group_c.git
+   cd cs-uh-2012-software-engineering-groupproject-group_c
+   ```
+
+2. Copy the sample env and fill in values:
+   ```
+   cp .samplenv .env
+   # edit .env with your Atlas URI, JWT secret etc.
+   ```
+
+3. Start the server:
+   ```
+   docker compose up --build
+   ```
+
+4. The API is accessible at:
+   ```
+   http://localhost:8000
+   ```
+
+### Stopping
+
+```
+docker compose down
+```
