@@ -4,6 +4,17 @@
 
 This is a repo for a Fitness Class Management and Booking API. The API manages user authentication, Class booking and Class listing
 
+## Live Deployment
+
+The API is live at:
+
+```
+http://139.59.24.188:8000/
+```
+
+Deployed automatically via GitHub Actions on every
+push to `main` that passes CI.
+
 ## Prerequisites
 
 - python 3.10 or higher
